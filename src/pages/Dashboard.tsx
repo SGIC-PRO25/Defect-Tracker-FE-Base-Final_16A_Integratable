@@ -1482,7 +1482,7 @@ projects.forEach((project) => {
                       const severityData =
                         severities.length > 0
                           ? severities.find(
-                              (s) => s.name.toLowerCase() === severity,
+                              (s) => (s.name || "").toLowerCase() === severity,
                             )
                           : undefined;
                       const severityColor =

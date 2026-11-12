@@ -1092,7 +1092,15 @@ useEffect(() => {
 }, [selectedProject]);
   useEffect(() => {
     getSeverities()
-      .then((res) => setSeverities(res.data.content))
+      .then((res) => {
+        const list = Array.isArray(res?.data?.content) ? res.data.content : [];
+        setSeverities(
+          list.map((s: any) => ({
+            ...s,
+            name: s.name ?? s.severityName ?? "",
+          })),
+        );
+      })
 
       .catch((error) => {
         console.error("Failed to fetch severities:", error.message);
@@ -2373,7 +2381,7 @@ useEffect(() => {
     if (!severityName) return "bg-gray-100 text-gray-800";
 
     const severity = severities.find(
-      (s) => s.name.toLowerCase() === severityName.toLowerCase(),
+      (s) => (s.name || "").toLowerCase() === severityName.toLowerCase(),
     );
 
     if (severity && severity.color) {

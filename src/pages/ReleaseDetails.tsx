@@ -128,7 +128,14 @@ const ReleaseDetails: React.FC = () => {
   useEffect(() => {
     getSeverities().then(res => {
       console.log('Loaded severities:', res.data);
-      setSeverities(res.data.content);
+      const list = Array.isArray(res?.data?.content) ? res.data.content : [];
+      setSeverities(
+        list.map((s: any) => ({
+          id: s.id,
+          name: s.name ?? s.severityName ?? '',
+          color: s.color ?? '',
+        }))
+      );
     }).catch(err => {
       console.error('Error loading severities:', err);
     });
@@ -392,7 +399,7 @@ const ReleaseDetails: React.FC = () => {
     if (!severity || severity === 'N/A') return "bg-gray-100 text-gray-800";
     
     
-    const severityObj = severities.find(s => s.name.toLowerCase() === severity.toLowerCase());
+    const severityObj = severities.find(s => (s.name || '').toLowerCase() === severity.toLowerCase());
     if (severityObj) {
       
       return `bg-[${severityObj.color}] text-white`;
@@ -448,9 +455,9 @@ const ReleaseDetails: React.FC = () => {
               ) : modules.length === 0 ? (
                 <div className="p-2 text-gray-500">No modules found for this project.</div>
               ) : (
-                modules.map((module: Module) => (
+                modules.map((module: Module, idx: number) => (
                   <Button
-                    key={module.id}
+                    key={`${module.id}-${idx}`}
                     variant={selectedModule === module.id ? "primary" : "secondary"}
                     onClick={() => handleModuleSelect(module.id)}
                     className="whitespace-nowrap m-2"
@@ -512,9 +519,9 @@ const ReleaseDetails: React.FC = () => {
                 ) : submodules.length === 0 ? (
                   <div className="p-2 text-gray-500">No submodules found for this module.</div>
                 ) : (
-                  submodules.map((submodule) => (
+                  submodules.map((submodule, idx) => (
                     <Button
-                      key={submodule.subModuleId}
+                      key={submodule.subModuleId ?? `${submodule.subModuleName}-${idx}`}
                       variant={selectedSubmoduleId === String(submodule.subModuleId) ? "primary" : "secondary"}
                       onClick={() => handleSubmoduleSelect(String(submodule.subModuleId))}
                       className="min-w-max whitespace-nowrap m-2"
@@ -614,7 +621,7 @@ const ReleaseDetails: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{testCase.type || 'N/A'}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {(() => {
-                          const severityObj = severities.find(s => s.name.toLowerCase() === (testCase.severity || '').toLowerCase());
+                          const severityObj = severities.find(s => !!s.name && s.name.toLowerCase() === (testCase.severity || '').toLowerCase());
                           if (severityObj) {
                             // Use the actual color from severities data
                             return (
