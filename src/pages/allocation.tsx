@@ -2511,7 +2511,7 @@ if (allocationMode === "one-to-one") {
 
     
 
-    const severityConfig = severities.find(s => s.name.toLowerCase() === severity.toLowerCase());
+    const severityConfig = severities.find(s => (s.name || '').toLowerCase() === (severity || '').toLowerCase());
 
 
 

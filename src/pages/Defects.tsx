@@ -3290,7 +3290,7 @@ React.useEffect(() => {
                     return severityKeys.map((severity) => {
                       const severityLabel = `Defects on ${severity.charAt(0).toUpperCase() + severity.slice(1)}`;
                       const severityData = severities.find(
-                        (s) => s.name.toLowerCase() === severity,
+                        (s) => (s.name || "").toLowerCase() === severity,
                       );
                       const severityColor = severityData?.color || "#6B7280";
                       const hexColor = severityColor.startsWith("#")

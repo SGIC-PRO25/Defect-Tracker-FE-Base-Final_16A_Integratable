@@ -100,14 +100,14 @@ export const Employees: React.FC = () => {
     setToast({ isOpen: true, message, type });
 
   const filteredEmployees = allEmployees.filter((emp) => {
+  const term = searchTerm.trim().toLowerCase();
   const matchesSearch =
-    !searchTerm.trim() ||
-    emp.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email.toLocaleLowerCase().includes(searchTerm.toLowerCase())||                              
-    emp.contactNo.includes(searchTerm) ||
-    
-    `EMP${String(emp.id).padStart(4, "0")}`.toLowerCase().includes(searchTerm.toLowerCase());
+    !term ||
+    (emp.firstName || "").toLowerCase().includes(term) ||
+    (emp.lastName || "").toLowerCase().includes(term) ||
+    (emp.email || "").toLowerCase().includes(term) ||
+    String(emp.contactNo ?? "").includes(term) ||
+    `EMP${String(emp.id).padStart(4, "0")}`.toLowerCase().includes(term);
 
   const matchesStatus = !isActiveFilter || String(emp.isActive) === isActiveFilter;
   const matchesGender = !genderFilter || emp.gender === genderFilter;
