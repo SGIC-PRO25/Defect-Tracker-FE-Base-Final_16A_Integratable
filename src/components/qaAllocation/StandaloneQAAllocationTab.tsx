@@ -14,6 +14,8 @@ import {
   X,
 } from "lucide-react";
 import { mockDb } from "../../mock/mockData";
+import { getReleaseTestCasesByFiltersGroup } from "../../api/releasetestcase";
+import { bulkAssignOwner } from "../../api/qa_allocation/qa_allocation_get_filter";
 import { Button } from "../ui/Button";
 import { Card, CardContent } from "../ui/Card";
 import { Toast } from "../ui/Toast";
@@ -358,15 +360,22 @@ export const StandaloneQAAllocationTab: React.FC<StandaloneQAAllocationTabProps>
     setMessage(null);
 
     try {
-      const testCases = mockDb.getTestCases();
+      // Only the test cases allocated to the selected release. `testcaseId` holds the
+      // release test case id, which is what bulkAssignOwner expects.
+      const response = await getReleaseTestCasesByFiltersGroup({
+        projectId: Number(projectIdValue),
+        releaseId: Number(selectedReleaseId),
+        moduleId: 0,
+        subModuleId: 0,
+      });
       setAllTestCases(
-        testCases.map((tc) => ({
-          testcaseId: tc.id,
-          testCaseNo: tc.testcaseNo,
-          name: tc.description,
-          moduleId: tc.moduleId || 1,
-          submoduleId: tc.subModuleId || 1,
-          assignedTo: tc.assignedQaId || (tc.id % 2 === 0 ? 2 : null),
+        (response.data || []).map((row: any) => ({
+          testcaseId: Number(row.id),
+          testCaseNo: row.testCaseId,
+          name: row.description,
+          moduleId: Number(row.moduleId),
+          submoduleId: Number(row.subModuleId),
+          assignedTo: row.ownerId ?? null,
         }))
       );
     } catch (error) {
@@ -583,9 +592,10 @@ export const StandaloneQAAllocationTab: React.FC<StandaloneQAAllocationTabProps>
     }
 
     try {
-      selectedTestCaseIds.forEach((id) => {
-        mockDb.updateTestCase(id, { assignedQaId: Number(targetEmployeeId) });
-      });
+      const response = await bulkAssignOwner(Number(targetEmployeeId), selectedTestCaseIds);
+      if (response.status !== "success") {
+        throw new Error(response.message || "Failed to save QA allocation.");
+      }
 
       showToast("success", successText);
       setSelectedTestCaseIds([]);

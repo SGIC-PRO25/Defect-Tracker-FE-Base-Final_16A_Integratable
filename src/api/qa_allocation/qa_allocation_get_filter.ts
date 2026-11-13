@@ -1,4 +1,5 @@
 import { mockDb } from '../../mock/mockData';
+import { getReleaseTestCasesByFiltersGroup } from '../releasetestcase';
 
 export interface allocated_testcases {
   projectId: number;
@@ -23,21 +24,19 @@ export interface GetAllocatedTestCases_Response {
   data: allocated_testcase_details[];
 }
 
-export async function getAllocatedTestCases({ subModuleId }: allocated_testcases): Promise<GetAllocatedTestCases_Response> {
-  const testCases = mockDb.getTestCases(subModuleId);
-
+// Test cases allocated to the release (not every test case in the submodule)
+export async function getAllocatedTestCases({ projectId, releaseId, moduleId, subModuleId }: allocated_testcases): Promise<GetAllocatedTestCases_Response> {
+  const res = await getReleaseTestCasesByFiltersGroup({
+    projectId,
+    releaseId: Number(releaseId),
+    moduleId,
+    subModuleId,
+  });
   return {
     status: 'success',
     statusCode: 200,
     message: 'Allocated test cases retrieved successfully',
-    data: testCases.map(t => ({
-      id: t.id,
-      testCaseId: t.testcaseNo,
-      description: t.description,
-      steps: t.detailsSteps || t.steps || '',
-      type: t.defectTypeName,
-      severity: t.severityName,
-    })),
+    data: res.data,
   };
 }
 
@@ -48,15 +47,16 @@ export interface BulkAssignOwnerResponse {
   data?: any;
 }
 
-export async function bulkAssignOwner(ownerId: number, testCaseIds: number[]): Promise<BulkAssignOwnerResponse> {
-  testCaseIds.forEach(id => {
-    mockDb.updateTestCase(id, { assignedQaId: ownerId });
-  });
-
+// `releaseTestCaseIds` are release test case row ids (the `id` returned by the release APIs)
+export async function bulkAssignOwner(ownerId: number, releaseTestCaseIds: number[]): Promise<BulkAssignOwnerResponse> {
+  const updated = mockDb.assignReleaseTestCaseOwner(ownerId, releaseTestCaseIds.map(Number));
+  if (updated.length === 0) {
+    return { status: 'failure', statusCode: 404, message: 'No matching release test cases found' };
+  }
   return {
     status: 'success',
     statusCode: 200,
-    message: 'Owner assigned successfully',
-    data: { ownerId, testCaseIds },
+    message: `${updated.length} test case(s) assigned successfully`,
+    data: { ownerId, releaseTestCaseIds: updated.map(r => r.id) },
   };
 }

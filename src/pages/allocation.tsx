@@ -46,7 +46,7 @@ import { getDefectTypes } from "../api/defectType";
 
 import { TestCase as TestCaseType } from "../types/index";
 
-import { allocateTestCaseToRelease, allocateTestCaseToMultipleReleases, bulkAllocateTestCasesToReleases, allocateTestCasesToManyReleases, getReleaseTestCasesByFiltersGroup, getQaAllocationSummary, getQaEngineerTestCases } from "../api/releasetestcase";
+import { allocateTestCaseToRelease, allocateTestCaseToMultipleReleases, bulkAllocateTestCasesToReleases, allocateTestCasesToManyReleases, getReleaseTestCasesByFiltersGroup, getQaAllocationSummary, getQaEngineerTestCases, getQaAllocationsByRelease } from "../api/releasetestcase";
 
 import { getModulesByProjectId } from "../api/module/getModule";
 
@@ -395,13 +395,19 @@ useEffect(() => {
 
     try {
 
-      
-
-      
-
-      
-
-      
+      // Restore QA ownership already saved for each release, so assigned test cases
+      // do not reappear as unassigned after a reload
+      const entries = await Promise.all(
+        effectiveProjectRelease.map(async (release: any) => {
+          const releaseId = String(release.releaseId || release.id);
+          return [releaseId, await getQaAllocationsByRelease(releaseId)] as const;
+        })
+      );
+      setQaAllocations(prev => {
+        const next = { ...prev };
+        entries.forEach(([releaseId, byQa]) => { next[releaseId] = byQa; });
+        return next;
+      });
 
     } catch (error) {
 
@@ -1591,7 +1597,7 @@ if (allocationMode === "one-to-one") {
   const failedDetails: { testCaseId: string; testCaseNo: string; releaseId: number; error: string }[] = [];
   
   const releaseNames = selectedIds.map(id => {
-    const release = effectiveProjectRelease.find(r => (r.releaseId || r.id) === Number(id));
+    const release = effectiveProjectRelease.find(r => String(r.releaseId || r.id) === String(id));
     return release?.releaseName || release?.name || `Release ${id}`;
   });
   
@@ -1668,7 +1674,7 @@ if (allocationMode === "one-to-one") {
   const failedDetails: { testCaseId: string; testCaseNo: string; releaseId: number; error: string }[] = [];
   
   const releaseNames = selectedIds.map(id => {
-    const release = effectiveProjectRelease.find(r => (r.releaseId || r.id) === Number(id));
+    const release = effectiveProjectRelease.find(r => String(r.releaseId || r.id) === String(id));
     return release?.releaseName || release?.name || `Release ${id}`;
   });
   
@@ -1750,7 +1756,7 @@ if (allocationMode === "one-to-one") {
       setAllocationProgress({ current: 0, total: 1 });
       
       const releaseName = selectedIds.map(id => {
-        const release = effectiveProjectRelease.find(r => (r.releaseId || r.id) === Number(id));
+        const release = effectiveProjectRelease.find(r => String(r.releaseId || r.id) === String(id));
         return release?.releaseName || release?.name || `Release ${id}`;
       })[0];
       
@@ -1793,7 +1799,7 @@ if (allocationMode === "one-to-one") {
       
       const getReleaseNames = () => {
         return selectedIds.map(id => {
-          const release = effectiveProjectRelease.find(r => (r.releaseId || r.id) === Number(id));
+          const release = effectiveProjectRelease.find(r => String(r.releaseId || r.id) === String(id));
           return release?.releaseName || release?.name || `Release ${id}`;
         });
       };

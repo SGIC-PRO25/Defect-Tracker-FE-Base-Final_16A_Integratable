@@ -33,13 +33,13 @@ export const projectReleaseCardView = async (projectId: string | number) => {
   };
 };
 
-// Pages iterate `data` as a list of { releaseId, testCaseCount }.
-// Mock test cases are not linked to releases, so count by the release's project.
+// Pages iterate `data` as a list of { releaseId, testCaseCount }, counting the
+// test cases allocated to each release.
 export const getReleaseTestCaseCountsLoad = async (releaseIds: number[]) => {
-  const testCases = mockDb.getTestCases();
   const data = releaseIds.map(id => {
-    const release = mockDb.getReleaseById(id);
-    const inScope = testCases.filter(t => !release?.projectId || Number(t.projectId) === Number(release.projectId));
+    const inScope = mockDb.getReleaseTestCases(id)
+      .map(r => mockDb.getTestCaseById(r.testCaseId))
+      .filter((t): t is NonNullable<typeof t> => !!t);
     const count = (s: string) => inScope.filter(t => t.executionStatus === s).length;
     return {
       releaseId: id,

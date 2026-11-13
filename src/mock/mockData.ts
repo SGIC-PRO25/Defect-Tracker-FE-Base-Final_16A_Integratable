@@ -1352,6 +1352,31 @@ export const INITIAL_EMAIL_CONFIGS = [
 ];
 
 // Initial Email Point Setup & Templates
+// Test cases allocated to releases, with the QA engineer who owns each one (null = not yet assigned)
+export interface MockReleaseTestCase {
+  id: number;          // release test case id (distinct from the test case id)
+  releaseId: number;
+  testCaseId: number;
+  qaId: number | null;
+}
+
+// Every release has some test cases waiting for a QA owner (Assign tab) and, where there
+// are enough test cases, some already owned (Reassign tab).
+export const INITIAL_RELEASE_TEST_CASES: MockReleaseTestCase[] = [
+  // Release 2.4.0 - Summer Major (E-Commerce): TC-ECC-006 left out to try Release Allocation
+  { id: 1, releaseId: 1, testCaseId: 1, qaId: 2 },
+  { id: 2, releaseId: 1, testCaseId: 2, qaId: null },
+  { id: 3, releaseId: 1, testCaseId: 3, qaId: 5 },
+  { id: 4, releaseId: 1, testCaseId: 4, qaId: null },
+  { id: 5, releaseId: 1, testCaseId: 5, qaId: null },
+  // Release 2.3.5 - Hotfix (E-Commerce)
+  { id: 6, releaseId: 2, testCaseId: 1, qaId: 5 },
+  { id: 7, releaseId: 2, testCaseId: 3, qaId: null },
+  { id: 8, releaseId: 2, testCaseId: 6, qaId: null },
+  // Release 1.2.0 - Biometric Auth (Banking)
+  { id: 9, releaseId: 3, testCaseId: 7, qaId: null },
+];
+
 // Notification events. `eventType` is what the Email Configuration tabs read;
 // `eventName` is kept as an alias for older callers.
 export type NotificationChannel = 'none' | 'email' | 'whatsapp' | 'both';
@@ -2089,6 +2114,51 @@ class MockDbStore {
   deleteEmailConfig(id: number) {
     this.emailConfigs = this.emailConfigs.filter(e => e.id !== Number(id));
     return true;
+  }
+
+  // --- Release test cases (release <-> test case link, with optional QA owner) ---
+  // Mirrors the backend's release_test_case table: each row has its own id, which is
+  // what QA allocation sends back as the "release test case id".
+  private releaseTestCases: MockReleaseTestCase[] = this.loadReleaseTestCases();
+
+  private loadReleaseTestCases(): MockReleaseTestCase[] {
+    try {
+      const saved = localStorage.getItem('mock_release_testcases_v2');
+      if (saved) return JSON.parse(saved);
+    } catch { /* fall through to seed */ }
+    return INITIAL_RELEASE_TEST_CASES.map(r => ({ ...r }));
+  }
+  private saveReleaseTestCases() {
+    try { localStorage.setItem('mock_release_testcases_v2', JSON.stringify(this.releaseTestCases)); } catch { /* ignore */ }
+  }
+
+  getReleaseTestCases(releaseId?: number | string) {
+    return this.releaseTestCases.filter(r => releaseId == null || Number(r.releaseId) === Number(releaseId));
+  }
+  getReleaseTestCaseById(id: number) {
+    return this.releaseTestCases.find(r => r.id === Number(id));
+  }
+  /** Allocates test cases to a release; returns only the rows that were newly created. */
+  allocateTestCasesToRelease(releaseId: number | string, testCaseIds: Array<number | string>) {
+    const created: MockReleaseTestCase[] = [];
+    let nextId = this.releaseTestCases.reduce((max, r) => Math.max(max, r.id), 0) + 1;
+    for (const raw of testCaseIds) {
+      const testCaseId = Number(raw);
+      if (!this.getTestCaseById(testCaseId)) continue;
+      if (this.releaseTestCases.some(r => Number(r.releaseId) === Number(releaseId) && r.testCaseId === testCaseId)) continue;
+      const row: MockReleaseTestCase = { id: nextId++, releaseId: Number(releaseId), testCaseId, qaId: null };
+      this.releaseTestCases.push(row);
+      created.push(row);
+    }
+    if (created.length) this.saveReleaseTestCases();
+    return created;
+  }
+  /** Sets the QA owner on release test case rows (by row id); returns the updated rows. */
+  assignReleaseTestCaseOwner(ownerId: number, releaseTestCaseIds: number[]) {
+    const updated = this.releaseTestCases.filter(r => releaseTestCaseIds.includes(r.id));
+    updated.forEach(r => { r.qaId = Number(ownerId); });
+    if (updated.length) this.saveReleaseTestCases();
+    return updated;
   }
 
   // --- Notifications (point setups, templates, role rules, user extras) ---
