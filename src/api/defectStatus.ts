@@ -36,7 +36,7 @@ export const getAllDefectStatuses = async (
 ): Promise<DefectStatusData> => {
   const statuses = mockDb.getStatuses();
   return {
-    content: statuses.map(s => ({ id: s.id, name: s.statusName, color: s.color })),
+    content: statuses.map(s => ({ id: s.id, name: s.name, color: s.color })),
     totalPages: 1,
   };
 };
@@ -44,13 +44,13 @@ export const getAllDefectStatuses = async (
 export const createDefectStatus = async (
   statusData: CreateDefectStatusRequest
 ): Promise<DefectStatusResponse> => {
-  const created = mockDb.createStatus(statusData);
+  const created = mockDb.createStatusType(statusData);
   return {
     status: 'success',
     statusMessage: 'Status created successfully',
     statusCode: 200,
     data: {
-      content: [{ id: created.id, name: created.statusName, color: created.color }],
+      content: [{ id: created.id, name: created.name, color: created.color }],
       totalPages: 1,
     },
   };
@@ -60,20 +60,20 @@ export const updateDefectStatus = async (
   id: number,
   statusData: UpdateDefectStatusRequest
 ): Promise<DefectStatusResponse> => {
-  const updated = mockDb.updateStatus(id, statusData);
+  const updated = mockDb.updateStatusType(id, statusData);
   return {
     status: 'success',
     statusMessage: 'Status updated successfully',
     statusCode: 200,
     data: {
-      content: updated ? [{ id: updated.id, name: updated.statusName, color: updated.color }] : [],
+      content: updated ? [{ id: updated.id, name: updated.name, color: updated.color }] : [],
       totalPages: 1,
     },
   };
 };
 
 export const deleteDefectStatus = async (id: number): Promise<DefectStatusResponse> => {
-  mockDb.deleteStatus(id);
+  mockDb.deleteStatusType(id);
   return {
     status: 'success',
     statusMessage: 'Status deleted successfully',

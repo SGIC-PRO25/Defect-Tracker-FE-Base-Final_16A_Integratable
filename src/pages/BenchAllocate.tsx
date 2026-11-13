@@ -452,7 +452,7 @@ export default function BenchAllocate() {
 
         if (!selectedProjectId && projectsArray.length > 0) {
           const firstActiveProject = projectsArray.find(
-            (p: Project) => p.status === "active",
+            (p: Project) => String(p.status || "").toLowerCase() === "active",
           );
 
           if (firstActiveProject) {
@@ -986,7 +986,7 @@ export default function BenchAllocate() {
   // Only show active projects
 
   const availableProjects = useMemo(
-    () => projects.filter((p) => p.status === "active"),
+    () => projects.filter((p) => String(p.status || "").toLowerCase() === "active"),
     [projects],
   );
 

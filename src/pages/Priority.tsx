@@ -177,7 +177,7 @@ const Priority: React.FC = () => {
       await fetchPriorities(currentPage - 1, pageSize);
       setIsCreateModalOpen(false);
       resetForm();
-      const successMsg = "Priority "+ result.statusMessage || "Priority created successfully!";
+      const successMsg = (result as any).statusMessage || (result as any).message || "Priority created successfully!";
       showToast(successMsg,"success");
     } catch (error: any) {
       const errorMsg =
@@ -245,7 +245,7 @@ const Priority: React.FC = () => {
       setIsEditModalOpen(false);
       setEditingPriority(null);
       resetForm();
-      const successMsg = "Priority "+ result.statusMessage || "Priority updated successfully!";
+      const successMsg = (result as any).statusMessage || (result as any).message || "Priority updated successfully!";
       showToast(successMsg,"success");
 
     } catch (error:any) {
@@ -263,7 +263,7 @@ const Priority: React.FC = () => {
       await fetchPriorities(currentPage - 1, pageSize);
       setIsDeleteModalOpen(false);
       setDeletingPriority(null);
-      const successMsg = "Priority " + result.statusMessage || "Priority deleted successfully!";
+      const successMsg = (result as any).statusMessage || (result as any).message || "Priority deleted successfully!";
       showToast(successMsg,"success");
 
     } catch (error:any) {

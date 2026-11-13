@@ -1352,23 +1352,85 @@ export const INITIAL_EMAIL_CONFIGS = [
 ];
 
 // Initial Email Point Setup & Templates
-export const INITIAL_EMAIL_POINT_SETUPS = [
-  { id: 1, name: 'Defect Created', eventName: 'DEFECT_CREATED', isEnabled: true, description: 'Triggers when a new defect is reported' },
-  { id: 2, name: 'Defect Status Changed', eventName: 'DEFECT_STATUS_CHANGED', isEnabled: true, description: 'Triggers when defect transitions to open/in-progress/resolved/closed' },
-  { id: 3, name: 'Defect Reopened', eventName: 'DEFECT_REOPENED', isEnabled: true, description: 'Triggers when QA reopens a failed verification defect' },
-  { id: 4, name: 'Release Created', eventName: 'RELEASE_CREATED', isEnabled: true, description: 'Triggers when a new release milestone is planned' },
-  { id: 5, name: 'Developer Allocated', eventName: 'DEVELOPER_ALLOCATED', isEnabled: true, description: 'Triggers when developer is assigned to project or submodule' },
+// Notification events. `eventType` is what the Email Configuration tabs read;
+// `eventName` is kept as an alias for older callers.
+export type NotificationChannel = 'none' | 'email' | 'whatsapp' | 'both';
+
+const NOTIFICATION_EVENTS: Array<[number, string, string, boolean]> = [
+  [1, 'EMPLOYEE_CREATED', 'Sent to a new employee with their login details', true],
+  [2, 'EMPLOYEE_ACTIVATED', 'An employee account is activated', true],
+  [3, 'EMPLOYEE_DEACTIVATED', 'An employee account is deactivated', true],
+  [4, 'PROJECT_CREATED', 'A new project is created', true],
+  [5, 'PROJECT_ALLOCATION', 'An employee is allocated to a project', true],
+  [6, 'PROJECT_DEALLOCATION', 'An employee is removed from a project', true],
+  [7, 'MODULE_ALLOCATION', 'A developer is allocated to a module', true],
+  [8, 'SUBMODULE_ALLOCATION', 'A developer is allocated to a submodule', true],
+  [9, 'DEFECT_CREATED', 'A new defect is reported', true],
+  [10, 'DEFECT_ASSIGNED', 'A defect is assigned to a developer', true],
+  [11, 'DEFECT_REASSIGNED', 'A defect is reassigned to another developer', true],
+  [12, 'DEFECT_UPDATED', 'A defect status or details change', true],
+  [13, 'PASSWORD_RESET', 'A password reset link is requested', true],
+  [14, 'PASSWORD_CHANGED', 'An account password is changed', true],
+  [15, 'ACCOUNT_LOCKED', 'An account is locked after failed logins', false],
 ];
 
-export const INITIAL_EMAIL_TEMPLATES = [
-  {
-    id: 1,
-    name: 'Defect Notification Template',
-    subject: '[{{PROJECT_NAME}}] New Defect #{{DEFECT_ID}}: {{DEFECT_TITLE}}',
-    body: '<p>Hello <b>{{ASSIGNEE_NAME}}</b>,</p><p>A defect has been assigned to you in project <b>{{PROJECT_NAME}}</b>.</p><p><b>Severity:</b> {{SEVERITY}}<br/><b>Priority:</b> {{PRIORITY}}</p><p><a href="{{DEFECT_URL}}">Click here to view defect details</a></p>',
-    templateKey: 'DEFECT_NOTIFICATION',
-  },
-];
+const toLabel = (eventType: string) =>
+  eventType.toLowerCase().split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+
+export const INITIAL_EMAIL_POINT_SETUPS = NOTIFICATION_EVENTS.map(([id, eventType, description, isEnabled]) => ({
+  id,
+  eventType,
+  eventName: eventType,
+  name: toLabel(eventType),
+  description,
+  isEnabled,
+}));
+
+const TEMPLATE_CONTENT: Record<string, [string, string]> = {
+  EMPLOYEE_CREATED: ['Welcome to {{companyName}}', '<p>Hello <b>{{employeeName}}</b>,</p><p>Your account has been created.</p><p>Email: {{email}}<br/>Temporary password: {{password}}</p>'],
+  EMPLOYEE_ACTIVATED: ['Your account is active', '<p>Hello <b>{{employeeName}}</b>,</p><p>Your account has been activated. You can now sign in.</p>'],
+  EMPLOYEE_DEACTIVATED: ['Your account has been deactivated', '<p>Hello <b>{{employeeName}}</b>,</p><p>Your account has been deactivated. Contact your administrator if this is unexpected.</p>'],
+  PROJECT_CREATED: ['New project: {{projectName}}', '<p>Project <b>{{projectName}}</b> has been created with <b>{{managerName}}</b> as manager.</p>'],
+  PROJECT_ALLOCATION: ['You have been allocated to {{projectName}}', '<p>Hello <b>{{employeeName}}</b>,</p><p>You are allocated to <b>{{projectName}}</b> as {{roleName}} from {{startDate}} to {{endDate}}.</p>'],
+  PROJECT_DEALLOCATION: ['Removed from {{projectName}}', '<p>Hello <b>{{employeeName}}</b>,</p><p>You have been removed from <b>{{projectName}}</b> ({{roleName}}).</p>'],
+  MODULE_ALLOCATION: ['Module allocated: {{moduleName}}', '<p>Hello <b>{{employeeName}}</b>,</p><p>You have been allocated to module <b>{{moduleName}}</b>.</p>'],
+  SUBMODULE_ALLOCATION: ['Submodule allocated: {{submoduleName}}', '<p>Hello <b>{{employeeName}}</b>,</p><p>You have been allocated to submodule <b>{{submoduleName}}</b>.</p>'],
+  DEFECT_CREATED: ['[{{projectName}}] New defect {{defectId}}', '<p>A new defect <b>{{defectId}}</b> was reported in <b>{{projectName}}</b>.</p><p>{{description}}</p>'],
+  DEFECT_ASSIGNED: ['[{{projectName}}] Defect {{defectId}} assigned to you', '<p>Hello <b>{{recipientName}}</b>,</p><p>Defect <b>{{defectId}}</b> has been assigned to you.</p><p><a href="{{defectUrl}}">View defect</a></p>'],
+  DEFECT_REASSIGNED: ['[{{projectName}}] Defect {{defectId}} reassigned to you', '<p>Hello <b>{{recipientName}}</b>,</p><p>Defect <b>{{defectId}}</b> ({{severity}} / {{priority}}) was reassigned to you by {{assignedBy}}.</p><p><a href="{{defectUrl}}">View defect</a></p>'],
+  DEFECT_UPDATED: ['[{{projectName}}] Defect {{defectId}}: {{oldStatus}} → {{newStatus}}', '<p>Defect <b>{{defectId}}</b> moved from <b>{{oldStatus}}</b> to <b>{{newStatus}}</b>.</p>'],
+  PASSWORD_RESET: ['Reset your password', '<p>Hello <b>{{employeeName}}</b>,</p><p><a href="{{resetLink}}">Click here to reset your password</a>.</p>'],
+  PASSWORD_CHANGED: ['Your password was changed', '<p>Hello <b>{{employeeName}}</b>,</p><p>Your password was changed. If this was not you, contact your administrator.</p>'],
+  ACCOUNT_LOCKED: ['Your account is locked', '<p>Hello <b>{{employeeName}}</b>,</p><p>Your account was locked after several failed sign-in attempts.</p>'],
+};
+
+export const INITIAL_EMAIL_TEMPLATES = INITIAL_EMAIL_POINT_SETUPS.map(p => ({
+  id: p.id,
+  pointSetupId: p.id,
+  eventType: p.eventType,
+  templateKey: p.eventType,
+  name: `${p.name} Template`,
+  subject: TEMPLATE_CONTENT[p.eventType][0],
+  body: TEMPLATE_CONTENT[p.eventType][1],
+  updatedAt: '2026-10-01T09:00:00.000Z',
+}));
+
+// Default channel per notification event for each role (role id -> point id -> channel)
+export const INITIAL_ROLE_NOTIFICATION_CHANNELS: Record<number, Record<number, NotificationChannel>> = {
+  1: { 2: 'email', 3: 'email', 4: 'email', 14: 'email', 15: 'both' },                // Super Admin
+  2: { 4: 'email', 5: 'email', 6: 'email', 9: 'email', 12: 'email', 14: 'email' },  // Project Manager
+  3: { 7: 'email', 8: 'email', 10: 'both', 11: 'email', 14: 'email' },              // Tech Lead / Module Leader
+  4: { 8: 'email', 10: 'both', 11: 'whatsapp', 14: 'email' },                       // Developer
+  5: { 5: 'email', 9: 'email', 12: 'both', 14: 'email' },                           // QA Lead
+  6: { 9: 'email', 12: 'whatsapp', 14: 'email' },                                    // QA Tester
+};
+
+// Extra (opt-in) notifications some users have on top of their role rules
+export const INITIAL_USER_EXTRA_POINTS: Record<number, Record<number, NotificationChannel>> = {
+  1: { 9: 'whatsapp', 12: 'email' },
+  3: { 12: 'email' },
+  5: { 10: 'email', 11: 'email' },
+};
 
 // State Store Class for managing Mock Data statefully in memory / localStorage
 class MockDbStore {
@@ -2029,8 +2091,80 @@ class MockDbStore {
     return true;
   }
 
-  getEmailPointSetups() { return [...this.emailPointSetups]; }
-  getEmailTemplates() { return [...this.emailTemplates]; }
+  // --- Notifications (point setups, templates, role rules, user extras) ---
+  // Kept under one localStorage key so edits survive a page reload.
+  private notifications = this.loadNotifications();
+
+  private loadNotifications() {
+    const defaults = {
+      pointEnabled: {} as Record<number, boolean>,
+      templateEdits: {} as Record<number, { subject: string; body: string; updatedAt: string }>,
+      roleChannels: JSON.parse(JSON.stringify(INITIAL_ROLE_NOTIFICATION_CHANNELS)) as Record<number, Record<number, NotificationChannel>>,
+      userExtras: JSON.parse(JSON.stringify(INITIAL_USER_EXTRA_POINTS)) as Record<number, Record<number, NotificationChannel>>,
+      userPreferences: {} as Record<number, { emailNotifications: boolean }>,
+    };
+    try {
+      const saved = localStorage.getItem('mock_notifications');
+      return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+    } catch {
+      return defaults;
+    }
+  }
+  private saveNotifications() {
+    try { localStorage.setItem('mock_notifications', JSON.stringify(this.notifications)); } catch { /* ignore */ }
+  }
+
+  getEmailPointSetups() {
+    return this.emailPointSetups.map(p => ({ ...p, isEnabled: this.notifications.pointEnabled[p.id] ?? p.isEnabled }));
+  }
+  setEmailPointEnabled(id: number, isEnabled: boolean) {
+    this.notifications.pointEnabled[Number(id)] = isEnabled;
+    this.saveNotifications();
+    return this.getEmailPointSetups().find(p => p.id === Number(id)) ?? null;
+  }
+
+  getEmailTemplates() {
+    return this.emailTemplates.map(t => ({ ...t, ...(this.notifications.templateEdits[t.id] || {}) }));
+  }
+  updateEmailTemplate(id: number, data: { subject: string; body: string }) {
+    this.notifications.templateEdits[Number(id)] = { subject: data.subject, body: data.body, updatedAt: new Date().toISOString() };
+    this.saveNotifications();
+    return this.getEmailTemplates().find(t => t.id === Number(id)) ?? null;
+  }
+  resetEmailTemplate(id: number) {
+    delete this.notifications.templateEdits[Number(id)];
+    this.saveNotifications();
+    return this.getEmailTemplates().find(t => t.id === Number(id)) ?? null;
+  }
+
+  getRoleNotificationChannels(roleId: number): Record<number, NotificationChannel> {
+    return { ...(this.notifications.roleChannels[Number(roleId)] || {}) };
+  }
+  setRoleNotificationChannels(roleId: number, channels: Record<number, NotificationChannel>) {
+    const clean: Record<number, NotificationChannel> = {};
+    Object.entries(channels).forEach(([pid, ch]) => { if (ch && ch !== 'none') clean[Number(pid)] = ch; });
+    this.notifications.roleChannels[Number(roleId)] = clean;
+    this.saveNotifications();
+  }
+
+  getUserExtraPoints(userId: number): Record<number, NotificationChannel> {
+    return { ...(this.notifications.userExtras[Number(userId)] || {}) };
+  }
+  setUserExtraPoints(userId: number, channels: Record<number, NotificationChannel>) {
+    const clean: Record<number, NotificationChannel> = {};
+    Object.entries(channels).forEach(([pid, ch]) => { if (ch && ch !== 'none') clean[Number(pid)] = ch; });
+    this.notifications.userExtras[Number(userId)] = clean;
+    this.saveNotifications();
+  }
+
+  getUserPreferences(userId: number) {
+    return this.notifications.userPreferences[Number(userId)] ?? { emailNotifications: true };
+  }
+  updateUserPreferences(userId: number, prefs: Partial<{ emailNotifications: boolean }>) {
+    this.notifications.userPreferences[Number(userId)] = { ...this.getUserPreferences(userId), ...prefs };
+    this.saveNotifications();
+    return this.notifications.userPreferences[Number(userId)];
+  }
 }
 
 export const mockDb = new MockDbStore();
