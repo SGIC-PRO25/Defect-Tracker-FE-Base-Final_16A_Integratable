@@ -1,12 +1,13 @@
 import { mockDb } from "../../mock/mockData";
 
+// Execution counts for the test cases allocated to one release
 export const getReleaseTestCaseCount = async (releaseId: string | number) => {
-  const testCases = mockDb.getTestCases();
-  const total = testCases.length;
-  const passed = testCases.filter(t => t.executionStatus === 'PASS').length;
-  const failed = testCases.filter(t => t.executionStatus === 'FAIL').length;
-  const blocked = testCases.filter(t => t.executionStatus === 'BLOCKED').length;
-  const unexecuted = total - (passed + failed + blocked);
+  const rows = mockDb.getReleaseTestCases(releaseId);
+  const statusOf = (testCaseId: number) => mockDb.getTestCaseById(testCaseId)?.executionStatus;
+  const total = rows.length;
+  const passed = rows.filter(r => statusOf(r.testCaseId) === 'PASS').length;
+  const failed = rows.filter(r => statusOf(r.testCaseId) === 'FAIL').length;
+  const blocked = rows.filter(r => statusOf(r.testCaseId) === 'BLOCKED').length;
 
   return {
     status: 'success',
@@ -17,9 +18,22 @@ export const getReleaseTestCaseCount = async (releaseId: string | number) => {
       passedTestCases: passed,
       failedTestCases: failed,
       blockedTestCases: blocked,
-      unexecutedTestCases: Math.max(0, unexecuted),
+      unexecutedTestCases: Math.max(0, total - (passed + failed + blocked)),
     },
   };
 };
 
-export const getReleaseTestCaseCounts = getReleaseTestCaseCount;
+// One entry per release of the project: { releaseId, releaseName, testCaseCount }.
+// releaseId is a string because the allocation page compares it with === to its release ids.
+export const getReleaseTestCaseCounts = async (projectId: string | number) => {
+  const releases = mockDb.getReleases(Number(projectId));
+  return {
+    status: 'success',
+    statusCode: 200,
+    data: releases.map(r => ({
+      releaseId: String(r.id),
+      releaseName: r.name || r.releaseName || `Release ${r.id}`,
+      testCaseCount: mockDb.getReleaseTestCases(r.id).length,
+    })),
+  };
+};

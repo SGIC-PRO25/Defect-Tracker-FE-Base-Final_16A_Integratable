@@ -1,3 +1,5 @@
+import { mockDb } from "../../mock/mockData";
+
 export interface TimeToFindDefectsResponse {
   status: string;
   message: string;
@@ -27,16 +29,39 @@ export interface TimeToFixDefectsResponse {
   }[];
 }
 
-export async function getDefectSeveritySummary(_projectId: string) {
+// Built from the project's mock defects, in the backend shape the Dashboard and
+// Defects pages read: { totalRemark, totalDefects, severities: [{ severityName,
+// totalDefects, statusCounts }] }.
+// Remark = everything reported; Defect = remarks that were not rejected.
+export async function getDefectSeveritySummary(projectId: string | number) {
+  const defects = mockDb.getDefects(Number(projectId));
+  const statusOf = (d: any) => String(d.statusName || d.defectStatusName || d.status || 'New');
+  const severityOf = (d: any) => String(d.severityName || d.severity || '').toLowerCase();
+  const isRejected = (d: any) => statusOf(d).toLowerCase() === 'rejected';
+  const statusNames = mockDb.getStatuses().map(s => s.name);
+
+  const severities = mockDb.getSeverities().map(sev => {
+    const items = defects.filter(d => severityOf(d) === sev.name.toLowerCase());
+    const statusCounts: Record<string, number> = {};
+    statusNames.forEach(name => {
+      statusCounts[name] = items.filter(d => statusOf(d).toLowerCase() === name.toLowerCase()).length;
+    });
+    return {
+      severityName: sev.name,
+      severityColor: sev.color,
+      totalDefects: items.filter(d => !isRejected(d)).length,
+      statusCounts,
+    };
+  });
+
   return {
     status: 'success',
     statusCode: 200,
-    data: [
-      { name: 'Low', count: 8, percentage: 32 },
-      { name: 'Medium', count: 10, percentage: 40 },
-      { name: 'High', count: 5, percentage: 20 },
-      { name: 'Critical', count: 2, percentage: 8 },
-    ],
+    data: {
+      totalRemark: defects.length,
+      totalDefects: defects.filter(d => !isRejected(d)).length,
+      severities,
+    },
   };
 }
 
