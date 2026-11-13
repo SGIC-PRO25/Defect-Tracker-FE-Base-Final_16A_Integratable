@@ -1,5 +1,5 @@
 import { SmtpConfig } from "../types/emailConfiguration";
-import { mockDb, INITIAL_EMAIL_POINT_SETUPS, INITIAL_EMAIL_TEMPLATES } from "../mock/mockData";
+import { mockDb, NotificationChannel } from "../mock/mockData";
 
 export interface CreateSmtpConfigRequest {
   name: string;
@@ -40,31 +40,31 @@ export const updateSmtpConfigStatus = async (id: number, isEnabled: boolean) => 
 };
 
 export const getAllEmailPointSetups = async () => {
-  return INITIAL_EMAIL_POINT_SETUPS;
+  return mockDb.getEmailPointSetups();
 };
 
-export const getRoleNotificationChannels = async (_roleId: number): Promise<Record<number, string>> => {
-  return {
-    1: 'email',
-    2: 'email',
-    3: 'in-app',
-    4: 'email',
-  };
+export const getRoleNotificationChannels = async (roleId: number): Promise<Record<number, string>> => {
+  return mockDb.getRoleNotificationChannels(roleId);
 };
 
-export const updateRoleNotificationRules = async (_roleId: number, _pointChannels: Map<number, string>): Promise<void> => {
-  return Promise.resolve();
+export const updateRoleNotificationRules = async (roleId: number, pointChannels: Map<number, string>): Promise<void> => {
+  mockDb.setRoleNotificationChannels(roleId, Object.fromEntries(pointChannels) as Record<number, NotificationChannel>);
 };
 
-export const updateUserExtraPoints = async (_userId: number, _pointChannels: Map<number, string>): Promise<void> => {
-  return Promise.resolve();
+export const getUserExtraPoints = async (userId: number): Promise<Record<number, string>> => {
+  return mockDb.getUserExtraPoints(userId);
+};
+
+export const updateUserExtraPoints = async (userId: number, pointChannels: Map<number, string>): Promise<void> => {
+  mockDb.setUserExtraPoints(userId, Object.fromEntries(pointChannels) as Record<number, NotificationChannel>);
 };
 
 export const updateEmailPointSetupStatus = async (id: number, isEnabled: boolean) => {
+  const updated = mockDb.setEmailPointEnabled(id, isEnabled);
   return {
     status: 'success',
     statusCode: 200,
-    data: { id, isEnabled },
+    data: updated ?? { id, isEnabled },
   };
 };
 
@@ -72,23 +72,23 @@ export const getAllEmailTemplates = async () => {
   return {
     status: 'success',
     statusCode: 200,
-    data: INITIAL_EMAIL_TEMPLATES,
+    data: mockDb.getEmailTemplates(),
   };
 };
 
 export const updateEmailTemplate = async (id: number, data: { subject: string; body: string }) => {
+  const updated = mockDb.updateEmailTemplate(id, data);
   return {
     status: 'success',
     statusCode: 200,
-    data: { id, ...data },
+    data: updated ?? { id, ...data },
   };
 };
 
 export const resetEmailTemplate = async (id: number) => {
-  const template = INITIAL_EMAIL_TEMPLATES.find(t => t.id === id);
   return {
     status: 'success',
     statusCode: 200,
-    data: template,
+    data: mockDb.resetEmailTemplate(id),
   };
 };

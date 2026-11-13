@@ -1,4 +1,23 @@
-import { mockDb, INITIAL_PERMISSIONS } from "../mock/mockData";
+import { INITIAL_PERMISSIONS as FLAT_PERMISSIONS } from "../mock/mockData";
+
+// The mock permission list is flat; the pages expect it grouped by module.
+// Longest prefix first so e.g. ROLE_PERMISSION_* is not filed under ROLE.
+const MODULE_PREFIXES = [
+  'ROLE_PERMISSION', 'DEFECT_COMMENT', 'DEFECT_TYPE', 'RELEASE_TYPE', 'STATUS_TYPE',
+  'EMAIL_CONFIG', 'TEST_CASE', 'DESIGNATION', 'PERMISSION', 'SEVERITY', 'PRIORITY',
+  'WORKFLOW', 'EMPLOYEE', 'PROJECT', 'RELEASE', 'MODULE', 'DEFECT', 'BENCH', 'ROLE', 'ALL',
+];
+const toTitle = (s: string) => s.toLowerCase().split('_').map(w => w[0].toUpperCase() + w.slice(1)).join(' ');
+const INITIAL_PERMISSIONS: ModulePermission[] = (() => {
+  const groups = new Map<string, Permission[]>();
+  for (const p of FLAT_PERMISSIONS) {
+    const prefix = MODULE_PREFIXES.find(m => p.action === m || p.action.startsWith(m + '_')) ?? 'OTHER';
+    const key = toTitle(prefix === 'ALL' ? 'ADMINISTRATION' : prefix);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push({ permissionId: p.permissionId, action: p.action, description: p.description });
+  }
+  return [...groups].map(([module, permissions]) => ({ module, permissions }));
+})();
 
 export interface Permission {
   permissionId: number;

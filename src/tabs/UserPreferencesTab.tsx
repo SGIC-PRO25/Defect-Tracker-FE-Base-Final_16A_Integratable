@@ -4,7 +4,7 @@ import { Button } from "../components/ui/Button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/Select";
 import { Users, Bell, Search, Loader2, Save, CheckCircle, AlertCircle, Mail, Shield, MessageCircle, Smartphone, XCircle, Zap, Lock } from "lucide-react";
 import { SimpleUser, ToastState } from "../types/emailConfiguration";
-import { getAllEmailPointSetups, updateUserExtraPoints } from "../services/emailConfigurationApi";
+import { getAllEmailPointSetups, getRoleNotificationChannels, getUserExtraPoints, updateUserExtraPoints } from "../services/emailConfigurationApi";
 import { getAllUsersSimple } from "../api/users/getallusers";
 import { getViewAllocations } from "../api/bench/projectAllocation";
 import { usePermission } from "../context/PermissionContext";
@@ -55,8 +55,12 @@ export const UserPreferencesTab: React.FC = () => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const data = await getAllUsersSimple();
-      const userList = Array.isArray(data?.data?.content) ? data.data.content : [];
+      const data: any = await getAllUsersSimple();
+      const userList = Array.isArray(data?.data?.content)
+        ? data.data.content
+        : Array.isArray(data?.data)
+          ? data.data
+          : [];
       setUsers(userList);
     } catch (error) {
       console.error("Error loading users:", error);
@@ -93,22 +97,30 @@ export const UserPreferencesTab: React.FC = () => {
       setUserRoles(roles);
       
       
+      // Role-based rules: merge the channels of every role the user holds
       const allRoleChannels = new Map<number, string>();
       const allRolePoints = new Set<number>();
-      
-      const mockRoleChannels: Record<number, string> = { 1: 'email', 2: 'email', 3: 'in-app', 4: 'email' };
-      Object.entries(mockRoleChannels).forEach(([pointId, channel]) => {
-        const id = Number(pointId);
-        allRolePoints.add(id);
-        allRoleChannels.set(id, channel);
+      const roleChannelLists = await Promise.all(roles.map(r => getRoleNotificationChannels(r.id)));
+      roleChannelLists.forEach(channels => {
+        Object.entries(channels).forEach(([pointId, channel]) => {
+          const id = Number(pointId);
+          const prev = allRoleChannels.get(id);
+          allRolePoints.add(id);
+          // email + whatsapp from different roles combine into 'both'
+          allRoleChannels.set(id, prev && prev !== channel ? 'both' : channel);
+        });
       });
 
       setRoleBasedPoints(allRolePoints);
       setRoleBasedChannels(allRoleChannels);
 
+      // Extra rules the user opted into (role-based events are not configurable)
+      const savedExtras = await getUserExtraPoints(user.id);
       const extraPointsMap = new Map<number, NotificationChannel>();
-      extraPointsMap.set(1, 'email');
-      extraPointsMap.set(2, 'email');
+      Object.entries(savedExtras).forEach(([pointId, channel]) => {
+        const id = Number(pointId);
+        if (!allRolePoints.has(id)) extraPointsMap.set(id, channel as NotificationChannel);
+      });
 
       setUserExtraPoints(extraPointsMap);
       setOriginalExtraPoints(new Map(extraPointsMap));
@@ -176,7 +188,7 @@ export const UserPreferencesTab: React.FC = () => {
 
   const filteredUsers = users.filter((user) => {
     const name = `${user.firstName} ${user.lastName}`.toLowerCase();
-    const email = user.email.toLowerCase();
+    const email = (user.email || "").toLowerCase();
     const search = searchTerm.toLowerCase();
     return name.includes(search) || email.includes(search);
   });

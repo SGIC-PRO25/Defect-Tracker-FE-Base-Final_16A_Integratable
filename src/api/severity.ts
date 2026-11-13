@@ -38,7 +38,7 @@ export const createSeverity = async (data: CreateSeverityRequest): Promise<Creat
     status: 'success',
     message: 'Severity created successfully',
     statusCode: 200,
-    data: { id: created.id, name: created.severityName, color: created.color, weight: created.weight },
+    data: { id: created.id, name: created.name, color: created.color, weight: (created as any).weight ?? 0 },
   };
 };
 
@@ -48,7 +48,7 @@ export const updateSeverity = async (id: number, data: Partial<CreateSeverityReq
     status: 'success',
     message: 'Severity updated successfully',
     statusCode: 200,
-    data: updated ? { id: updated.id, name: updated.severityName, color: updated.color, weight: updated.weight } : undefined,
+    data: updated ? { id: updated.id, name: updated.name, color: updated.color, weight: (updated as any).weight ?? 0 } : undefined,
   };
 };
 
@@ -61,7 +61,7 @@ export const getSeverities = async (
     status: 'success',
     message: 'Severities fetched successfully',
     data: {
-      content: severities.map(s => ({ id: s.id, name: s.severityName, color: s.color, weight: s.weight })),
+      content: severities.map(s => ({ id: s.id, name: s.name, color: s.color, weight: (s as any).weight ?? 0 })),
       totalElements: severities.length,
       totalPages: 1,
       size: 100,

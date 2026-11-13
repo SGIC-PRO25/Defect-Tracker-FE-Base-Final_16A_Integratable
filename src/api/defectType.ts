@@ -2,6 +2,7 @@ import { mockDb } from "../mock/mockData";
 
 export interface ApiDefectType {
   id: number;
+  name: string;
   defectTypeName: string;
   description: string;
   category: 'functional' | 'performance' | 'security' | 'usability' | 'compatibility' | 'other';
@@ -25,7 +26,7 @@ export interface GetDefectTypesResponse {
 }
 
 export const createDefectType = async (data: { name: string }) => {
-  const created = mockDb.createDefectType(data.name);
+  const created = mockDb.createDefectType({ defectTypeName: data.name });
   return {
     status: 'success',
     statusCode: 200,
@@ -35,12 +36,12 @@ export const createDefectType = async (data: { name: string }) => {
 };
 
 export const updateDefectType = async (id: number, data: { name: string }) => {
-  const updated = mockDb.updateDefectType(id, data.name);
+  const updated = mockDb.updateDefectType(id, { defectTypeName: data.name, name: data.name });
   return {
     status: 'success',
     statusCode: 200,
     message: 'Defect type updated successfully',
-    data: updated ? { id: updated.id, defectTypeName: updated.defectTypeName } : null,
+    data: updated ? { id: updated.id, name: updated.defectTypeName, defectTypeName: updated.defectTypeName } : null,
   };
 };
 
@@ -53,8 +54,9 @@ export const getDefectTypes = async (_page = 0, _size = 100): Promise<GetDefectT
     data: {
       content: defectTypes.map(d => ({
         id: d.id,
-        defectTypeName: d.defectTypeName,
-        description: d.description || d.defectTypeName,
+        name: d.defectTypeName || (d as any).name || '',
+        defectTypeName: d.defectTypeName || (d as any).name || '',
+        description: (d as any).description || d.defectTypeName,
         category: 'functional',
         severity: 'medium',
         priority: 'medium',

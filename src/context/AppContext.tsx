@@ -688,7 +688,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const deleteTestCase = (testCaseId: string) => {
-    setTestCases((prev) => prev.filter((tc) => tc.id !== testCaseId));
+    setTestCases((prev) => prev.filter((tc) => String(tc.id) !== String(testCaseId)));
   };
 
   const addRelease = (release: Release) => {

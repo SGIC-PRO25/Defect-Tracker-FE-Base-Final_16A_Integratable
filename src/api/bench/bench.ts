@@ -1,23 +1,46 @@
-import { mockDb } from "../../mock/mockData";
+import { mockDb, INITIAL_BENCH_RESOURCES, MockUser } from "../../mock/mockData";
 
-export async function getBenchList(): Promise<any[]> {
-  const users = mockDb.getUsers();
-  return users
-    .filter(u => (u.availabilityPercent ?? 100) > 0)
-    .map(u => ({
+// Bench pages expect the backend shape: { employee: {...}, availability, availabilityPeriod }.
+// Flat fields are kept alongside for callers that read them directly.
+function toBenchItem(u: MockUser) {
+  const benchEntry = INITIAL_BENCH_RESOURCES.find(b => b.employeeId === u.id);
+  const availability = u.availabilityPercent ?? 100;
+  const availableFrom = benchEntry?.benchStartDate || new Date().toISOString().slice(0, 10);
+  return {
+    id: u.id,
+    employeeId: u.id,
+    userId: u.userId,
+    firstName: u.firstName,
+    lastName: u.lastName,
+    email: u.email,
+    contactNo: u.phone || '',
+    designation: u.designationName,
+    designationName: u.designationName,
+    skills: u.skills || [],
+    experience: u.experience || 2,
+    availability,
+    availabilityPercent: availability,
+    availabilityPeriod: availableFrom,
+    status: availability === 100 ? 'Available' : 'Partially Allocated',
+    benchStartDate: availableFrom,
+    benchEndDate: benchEntry?.benchEndDate || '2026-12-31',
+    employee: {
       id: u.id,
-      employeeId: u.id,
       userId: u.userId,
       firstName: u.firstName,
       lastName: u.lastName,
       email: u.email,
+      contactNo: u.phone || '',
       designationName: u.designationName,
-      skills: u.skills || [],
-      experience: u.experience || 2,
-      availabilityPercent: u.availabilityPercent ?? 100,
-      benchStartDate: u.joinedDate || '2026-01-01',
-      benchEndDate: '2026-12-31',
-    }));
+      active: (u.userStatus || 'ACTIVE').toUpperCase() === 'ACTIVE',
+    },
+  };
+}
+
+export async function getBenchList(): Promise<any[]> {
+  return mockDb.getUsers()
+    .filter(u => (u.availabilityPercent ?? 100) > 0)
+    .map(toBenchItem);
 }
 
 export const getViewAllocation = async (userId: string) => {
@@ -58,20 +81,7 @@ export const getBenchAvailability = async (page: number = 0, size: number = 5, f
     status: 'success',
     statusCode: 200,
     data: {
-      content: paged.map(u => ({
-        id: u.id,
-        employeeId: u.id,
-        userId: u.userId,
-        firstName: u.firstName,
-        lastName: u.lastName,
-        designation: u.designationName,
-        skills: u.skills || [],
-        experience: u.experience || 2,
-        availability: u.availabilityPercent ?? 100,
-        status: (u.availabilityPercent ?? 100) === 100 ? 'Available' : 'Partially Allocated',
-        benchStartDate: '2026-01-01',
-        benchEndDate: '2026-12-31',
-      })),
+      content: paged.map(toBenchItem),
       totalElements: bench.length,
       totalPages: Math.ceil(bench.length / size),
       size,

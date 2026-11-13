@@ -27,7 +27,7 @@ export const getAllPriorities = async (
     status: 'success',
     message: 'Priorities fetched successfully',
     data: {
-      content: priorities.map(p => ({ id: p.id, name: p.priorityName, color: p.color })),
+      content: priorities.map(p => ({ id: p.id, name: p.name, color: p.color })),
       totalElements: priorities.length,
       totalPages: 1,
       size: 100,
@@ -42,7 +42,7 @@ export const updatePriority = async (id: number, data: { name: string; color: st
     status: 'success',
     statusCode: 200,
     message: 'Priority updated successfully',
-    data: updated ? { id: updated.id, name: updated.priorityName, color: updated.color } : null,
+    data: updated ? { id: updated.id, name: updated.name, color: updated.color } : null,
   };
 };
 
@@ -61,6 +61,6 @@ export const createPriority = async (data: { name: string; color: string }) => {
     status: 'success',
     statusCode: 200,
     message: 'Priority created successfully',
-    data: { id: created.id, name: created.priorityName, color: created.color },
+    data: { id: created.id, name: created.name, color: created.color },
   };
 };

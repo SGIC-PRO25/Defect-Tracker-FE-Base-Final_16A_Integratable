@@ -56,8 +56,8 @@ export const getAllWorkflows = async (): Promise<GetAllWorkflowsResponse> => {
   for (let i = 0; i < statuses.length - 1; i++) {
     transitions.push({
       id: i + 1,
-      fromStatus: { id: statuses[i].id, name: statuses[i].statusName, color: statuses[i].color },
-      toStatus: { id: statuses[i + 1].id, name: statuses[i + 1].statusName, color: statuses[i + 1].color },
+      fromStatus: { id: statuses[i].id, name: statuses[i].name, color: statuses[i].color },
+      toStatus: { id: statuses[i + 1].id, name: statuses[i + 1].name, color: statuses[i + 1].color },
     });
   }
 
@@ -88,6 +88,12 @@ export const getNextStatuses = async (
     status: 'success',
     statusMessage: 'Next statuses fetched',
     statusCode: 200,
-    data: filtered.map(s => ({ id: s.id, name: s.statusName, color: s.color })),
+    // Callers read either the flat fields or item.toStatus (backend transition shape)
+    data: filtered.map(s => ({
+      id: s.id,
+      name: s.name,
+      color: s.color,
+      toStatus: { id: s.id, name: s.name, color: s.color },
+    })),
   };
 };
